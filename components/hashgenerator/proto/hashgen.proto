@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = ".;hashgenerator";
+
+service Hasher {
+  rpc GetHash (HashRequest) returns (HashResponse);
+}
+
+message HashRequest {
+  string text = 1;
+}
+
+message HashResponse {
+  string hash = 1;
+}
