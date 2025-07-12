@@ -1,3 +1,4 @@
+```mermaid
 sequenceDiagram
   Client->>Server: gRPC GetHash(text="hello")
   Server->>DB Pool: Запрос соединения
@@ -5,3 +6,4 @@ sequenceDiagram
   Server->>DB: INSERT INTO hashes VALUES (...)
   Server-->>Client: Возвращает хэш
   Server->>DB Pool: Возвращает соединение
+```
