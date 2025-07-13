@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "hashgenerator/proto"
+	pb "github.com/De-cROMPOS/pastebin/hashgenerator/proto"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -54,10 +54,3 @@ func (s *HgProtoServer) GetHash(ctx context.Context, req *pb.HashRequest) (*pb.H
 	}, nil
 }
 
-// func GetNewHash(text string) string {
-// 	hash, err := generateHash(text, 10)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return hash
-// }

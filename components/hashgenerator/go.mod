@@ -1,4 +1,4 @@
-module hashgenerator
+module github.com/De-cROMPOS/pastebin/hashgenerator
 
 go 1.23.2
 

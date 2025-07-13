@@ -3,10 +3,11 @@ package main
 import (
 	"log"
 	"net"
+	"time"
 
-	hg "hashgenerator/internal/hashgen"
+	hg "github.com/De-cROMPOS/pastebin/hashgenerator/internal/hashgen"
 
-	pb "hashgenerator/proto"
+	pb "github.com/De-cROMPOS/pastebin/hashgenerator/proto"
 
 	"google.golang.org/grpc"
 )
@@ -22,7 +23,11 @@ func main() {
 	}
 
 	log.Printf("starting grpc server...")
-	s := grpc.NewServer()
+	s := grpc.NewServer(
+		grpc.MaxConcurrentStreams(1000),
+		grpc.NumStreamWorkers(20),
+		grpc.ConnectionTimeout(10*time.Second),
+	)
 	pb.RegisterHasherServer(s, &hg.HgProtoServer{
 		DB: conDB,
 	})
