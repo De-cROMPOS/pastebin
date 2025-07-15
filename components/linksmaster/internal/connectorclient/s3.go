@@ -3,21 +3,27 @@ package connectorclient
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-func getGrpcConn() (*grpc.ClientConn, error) {
-	clientConn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+type S3Client struct {
+	minioClient *minio.Client
+}
+
+func (sc *S3Client) S3Init() error {
+	var err error
+	sc.minioClient, err = getS3Conn()
 	if err != nil {
-		return nil, fmt.Errorf("grpc didn't connect. %v", err)
+		return fmt.Errorf("failed to initialize MinIO client: %v", err)
 	}
 
-	return clientConn, nil
+	return nil
 }
 
 func getS3Conn() (*minio.Client, error) {
@@ -51,6 +57,46 @@ func getS3Conn() (*minio.Client, error) {
 	}
 
 	return s3Client, nil
+}
+
+func (sc *S3Client) AddTextToS3(hash, text *string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// loading text into s3
+	_, err := sc.minioClient.PutObject(
+		ctx,
+		"text-bin",
+		*hash,
+		strings.NewReader(*text),
+		int64(len(*text)),
+		minio.PutObjectOptions{
+			ContentType: "text/plain",
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to upload to storage: %w", err)
+	}
+
+	return nil
+}
+
+func (sc *S3Client) GetLinkFromS3(hash *string, ttl *time.Duration) (*url.URL, error) {
+	ctx := context.Background()
+
+	// link gen
+	url, err := sc.minioClient.PresignedGetObject(
+		ctx,
+		"text-bin",
+		*hash,
+		*ttl,
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate presigned URL: %w", err)
+	}
+
+	return url, nil
 }
 
 func SetAutoDeletePolicy(minioClient *minio.Client, bucketName string, daysToExpire int) error {

@@ -25,8 +25,8 @@ func main() {
 	// 	log.Fatalf("coulnd get grpc response: %v", err)
 	// }
 	// log.Printf("Message hash: %v, time spent: %v", r.GetHash(), time.Since(starterTime))
-
-	c, err := connectorclient.Initconnectorclient()
+	var c connectorclient.ConnectorClient
+	err := c.Init()
 	if err != nil {
 		log.Fatalf("smth went wrong: %v", err)
 	}

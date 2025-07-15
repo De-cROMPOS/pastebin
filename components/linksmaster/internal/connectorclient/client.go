@@ -4,98 +4,60 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/minio/minio-go/v7"
-
 	pb "github.com/De-cROMPOS/pastebin/hashgenerator/proto"
-	"google.golang.org/grpc"
 )
-
-type reqData struct {
-	Text string `json:"text"`
-	TTL  string `json:"ttl"`
-}
 
 // TODO: init, get hash == http serv, graceful shutdown to close conn...
 type ConnectorClient struct {
-	hc       pb.HasherClient
-	grpcConn *grpc.ClientConn
-
-	s3Conn *minio.Client
+	GrpcClient
+	S3Client
 
 	// TODO:
 	// redis conn
 	// postgres conn
-	// s3 conn
 }
 
 // TODO: хэлфчеки + переподнятие упавших
-func Initconnectorclient() (*ConnectorClient, error) {
-	grpcConn, err := getGrpcConn()
+func (cc *ConnectorClient) Init() error {
+	err := cc.GrpcInit()
 	if err != nil {
-		return nil, fmt.Errorf("grpc didn't connect: %v", err)
+		return fmt.Errorf("grpc didn't connect: %v", err)
 	}
 
+	// In case if err will happen next
 	defer func() {
 		if err != nil {
-			grpcConn.Close()
+			cc.grpcConn.Close()
 		}
 	}()
 
-	hasherClient := pb.NewHasherClient(grpcConn)
-
-	s3Conn, err := getS3Conn()
+	err = cc.S3Init()
 	if err != nil {
-		return nil, fmt.Errorf("s3 didn't  connect: %v", err)
+		return fmt.Errorf("s3 didn't connect: %v", err)
 	}
 
-	// TODO:
-	// redis conn
-	// postgre conn
-
-	return &ConnectorClient{
-		hc:       hasherClient,
-		grpcConn: grpcConn,
-		s3Conn:   s3Conn,
-	}, nil
+	return nil
 }
 
-func (connectorClient *ConnectorClient) asyncLoader(hash, text string, ttl time.Duration) (string, error) {
+func (connectorClient *ConnectorClient) asyncLoader(hash, text string, ttl time.Duration) error {
 
-	ctx := context.Background()
-
-	// loading text into s3
-	_, err := connectorClient.s3Conn.PutObject(
-		ctx,
-		"text-bin",
-		hash,
-		strings.NewReader(text),
-		int64(len(text)),
-		minio.PutObjectOptions{
-			ContentType: "text/plain",
-		},
-	)
+	err := connectorClient.AddTextToS3(&hash, &text)
 	if err != nil {
-		return "", fmt.Errorf("failed to upload to storage: %w", err)
+		return fmt.Errorf("failed to upload to s3: %v", err)
 	}
 
 	// link gen
-	url, err := connectorClient.s3Conn.PresignedGetObject(
-		ctx,
-		"text-bin",
-		hash,
-		ttl,
-		nil,
-	)
+	url, err := connectorClient.GetLinkFromS3(&hash, &ttl)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
+		return fmt.Errorf("failed to get link from s3: %v", err)
 	}
 
 	fmt.Println("We got an url:", url.String())
-	return url.String(), nil
+	return nil
 }
 
 // todo: подумать бы:
@@ -121,10 +83,13 @@ func (connectorclient *ConnectorClient) HashHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	resp, err := connectorclient.hc.GetHash(r.Context(), &pb.HashRequest{Text: data.Text})
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	resp, err := connectorclient.hasherClient.GetHash(ctx, &pb.HashRequest{Text: data.Text})
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"error": "grpc service error"}`))
+		return
 	}
 
 	response := map[string]string{
@@ -133,13 +98,19 @@ func (connectorclient *ConnectorClient) HashHandler(w http.ResponseWriter, r *ht
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
+	//todo: сделать пул воркеров для асинклоадера
 	go func() {
 		duration, err := time.ParseDuration(data.TTL)
 		if err != nil {
 			duration = 24 * time.Hour
 		}
 
-		connectorclient.asyncLoader(resp.GetHash(), data.Text, duration)
+		err = connectorclient.asyncLoader(resp.GetHash(), data.Text, duration)
+		// todo: мб через брокер докидывать если ошибка случится 
+		// или пытаться переподключиться и по новой грузить и данные по идее тут будут копитсься...
+		if err != nil {
+			log.Printf("smth went wrong while writing to storages: %v", err)
+		}
 	}()
 
 	// TODO:
