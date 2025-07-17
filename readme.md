@@ -1,5 +1,7 @@
 ## Рисунок структуры
-![pr](https://github.com/user-attachments/assets/3415b266-eeb5-47e4-b78a-f4227048225e)
+![newDia drawio](https://github.com/user-attachments/assets/4f5a6585-7435-433d-a079-5b5079ba1d36)
+
+
 
 
 todo: сделать одну постгрю с партициями по часам и удалятор чтоб из других хранилищ тоже чистило по возможности
