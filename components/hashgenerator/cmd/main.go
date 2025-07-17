@@ -16,6 +16,7 @@ func main() {
 
 	log.Printf("initializing DB...")
 	conDB := hg.InitDB()
+	log.Printf("DB initialized!")
 
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
@@ -32,7 +33,7 @@ func main() {
 		DB: conDB,
 	})
 
-	log.Printf("starting serving grpc...")
+	log.Printf("serving grpc...")
 	if err := s.Serve(lis); err != nil {
 		log.Fatal(err)
 	}
