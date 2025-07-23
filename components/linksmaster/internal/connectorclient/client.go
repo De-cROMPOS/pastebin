@@ -15,6 +15,7 @@ import (
 type ConnectorClient struct {
 	GrpcClient
 	S3Client
+	PGClient
 
 	// TODO:
 	// redis conn
@@ -40,6 +41,11 @@ func (cc *ConnectorClient) Init() error {
 		return fmt.Errorf("s3 didn't connect: %v", err)
 	}
 
+	err = cc.PGInit()
+	if err != nil {
+		return fmt.Errorf("pg didn't connect: %v", err)
+	}
+
 	return nil
 }
 
@@ -50,13 +56,19 @@ func (connectorClient *ConnectorClient) asyncLoader(hash, text string, ttl time.
 		return fmt.Errorf("failed to upload to s3: %v", err)
 	}
 
-	// link gen
+	// s3 link gen
 	url, err := connectorClient.GetLinkFromS3(&hash, &ttl)
 	if err != nil {
 		return fmt.Errorf("failed to get link from s3: %v", err)
 	}
 
-	fmt.Println("We got an url:", url.String())
+	expTime := time.Now().Add(ttl)
+
+	err = connectorClient.InsertPGData(hash, url.String(), expTime)
+	if err != nil {
+		return fmt.Errorf("failed to put data into pg: %v", err)
+	}
+
 	return nil
 }
 
@@ -106,17 +118,13 @@ func (connectorclient *ConnectorClient) HashHandler(w http.ResponseWriter, r *ht
 		}
 
 		err = connectorclient.asyncLoader(resp.GetHash(), data.Text, duration)
-		// todo: мб через брокер докидывать если ошибка случится 
+		// todo: мб через брокер докидывать если ошибка случится
 		// или пытаться переподключиться и по новой грузить и данные по идее тут будут копитсься...
 		if err != nil {
 			log.Printf("smth went wrong while writing to storages: %v", err)
 		}
 	}()
 
-	// TODO:
-	// grpc req
-	// async writing to DB's
-	// http response
 
 }
 

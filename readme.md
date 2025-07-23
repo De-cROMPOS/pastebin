@@ -5,3 +5,11 @@
 
 
 todo: сделать одну постгрю с партициями по часам и удалятор чтоб из других хранилищ тоже чистило по возможности
+
+
+```
+curl -X POST   http://localhost:1234   -H "Content-Type: application/json"   -d '{
+    "text": "Hello, world!",
+    "ttl": "1m"
+  }'
+```

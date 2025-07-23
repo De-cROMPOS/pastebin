@@ -41,8 +41,8 @@ func main() {
 				if err != nil {
 					log.Printf("error while dropping particion: %s", err)
 				}
-				t = t.Add(1 * time.Hour)
 				err = partitioner.CreateNewPartition(db, t)
+				t = t.Add(1 * time.Hour)
 				if err != nil {
 					log.Printf("error while creating particion: %s", err)
 				}

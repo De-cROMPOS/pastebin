@@ -22,15 +22,16 @@ func InitMainTable(db *gorm.DB) {
 }
 
 func CreateNewPartition(db *gorm.DB, timeFrom time.Time) error {
+	UTCtime := timeFrom.UTC()
 	starterTime := time.Date(
-		timeFrom.Year(),
-		timeFrom.Month(),
-		timeFrom.Day(),
-		timeFrom.Hour(),
+		UTCtime.Year(),
+		UTCtime.Month(),
+		UTCtime.Day(),
+		UTCtime.Hour(),
 		0,
 		0,
 		0,
-		timeFrom.Location(),
+		time.UTC,
 	)
 
 	endTime := starterTime.Add(1 * time.Hour)
