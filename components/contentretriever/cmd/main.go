@@ -9,22 +9,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/De-cROMPOS/pastebin/linksmaker/internal/connectorclient"
+	"github.com/De-cROMPOS/pastebin/contentretriever/internal/content"
 )
 
 func main() {
-	var c connectorclient.ConnectorClient
 
-	log.Println("Initializing connections to storages...")
-	if err := c.Init(); err != nil {
-		log.Fatalf("Failed to initialize: %v", err)
+	log.Printf("initializing conftroller...")
+	var controller content.ContentController
+	if err := controller.Initialize(); err != nil {
+		log.Fatalf("smth went wrong while initializing controller %s", err)
 	}
-	defer c.Close()
-	log.Printf("connected, starting serving")
+	log.Printf("controller initialized...")
 
 	server := &http.Server{
-		Addr:    ":1234",
-		Handler: http.HandlerFunc(c.HashHandler),
+		Addr:         ":4321",
+		Handler:      http.HandlerFunc(controller.GetHandler),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  15 * time.Second,

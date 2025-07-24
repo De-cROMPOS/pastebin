@@ -16,10 +16,6 @@ type ConnectorClient struct {
 	GrpcClient
 	S3Client
 	PGClient
-
-	// TODO:
-	// redis conn
-	// postgres conn
 }
 
 // TODO: хэлфчеки + переподнятие упавших
@@ -72,7 +68,6 @@ func (connectorClient *ConnectorClient) asyncLoader(hash, text string, ttl time.
 	return nil
 }
 
-// todo: подумать бы:
 func (connectorclient *ConnectorClient) HashHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -129,9 +124,15 @@ func (connectorclient *ConnectorClient) HashHandler(w http.ResponseWriter, r *ht
 }
 
 func (connectorclient *ConnectorClient) Close() {
-	// TODO:
-	// redis closure
-	// postrge closure
-	// s3 closure
-	connectorclient.grpcConn.Close()
+	log.Printf("pg is shutting down...")
+	if err := connectorclient.PGClient.Close(); err != nil {
+		log.Printf("pg shutdown error: %s", err)
+	}
+	log.Printf("pg stopped")
+
+	log.Printf("grpc is shutting down...")
+	if err := connectorclient.grpcConn.Close(); err != nil {
+		log.Printf("grpc shutdown error: %s", err)
+	}
+	log.Printf("grpc stopped")
 }

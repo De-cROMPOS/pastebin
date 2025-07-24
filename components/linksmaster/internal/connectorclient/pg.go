@@ -47,3 +47,20 @@ func (pgc *PGClient) InsertPGData(hash, s3URL string, expiration time.Time) erro
 
 	return result.Error
 }
+
+func (pgc *PGClient) Close() error {
+	if pgc == nil || pgc.pgConn == nil {
+		return nil
+	}
+
+	sqlDB, err := pgc.pgConn.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get database instance: %w", err)
+	}
+
+	if err := sqlDB.Close(); err != nil {
+		return fmt.Errorf("failed to close database connection: %w", err)
+	}
+
+	return nil
+}

@@ -56,7 +56,7 @@ func CreateNewPartition(db *gorm.DB, timeFrom time.Time) error {
 }
 
 func DropOldPartition(db *gorm.DB) error {
-	timeNow := time.Now()
+	timeNow := time.Now().UTC()
 	timeToDrop := timeNow.Add(-1 * time.Hour)
 
 	starterTime := time.Date(
@@ -67,7 +67,7 @@ func DropOldPartition(db *gorm.DB) error {
 		0,
 		0,
 		0,
-		timeToDrop.Location(),
+		time.UTC,
 	)
 // todo: add kafka with query data
 	oldPartName := fmt.Sprintf("meta_table_%s", starterTime.Format("20060102_15"))
