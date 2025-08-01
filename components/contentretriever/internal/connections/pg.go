@@ -12,6 +12,17 @@ type PGClient struct {
 	pgConn *gorm.DB
 }
 
+func (pgc *PGClient) Close() error {
+    if pgc.pgConn != nil {
+        db, err := pgc.pgConn.DB()
+        if err != nil {
+            return fmt.Errorf("failed to get generic database object: %w", err)
+        }
+        return db.Close()
+    }
+    return nil
+}
+
 func (pgc *PGClient) PGInit() error {
 	dsn := "host=localhost user=admin password=loh dbname=meta_db port=5433"
 
@@ -27,6 +38,26 @@ func (pgc *PGClient) PGInit() error {
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	return nil
+}
+
+func (pgc *PGClient) GetMeta(hash string) (metaRecord, error) {
+	var meta metaRecord
+	if hash == "" {
+		return meta, fmt.Errorf("empty hash")
+	}
+
+	err := pgc.pgConn.Table("meta_table").
+		Where("hash = ? AND expiration > ?", hash, time.Now().UTC()).
+		First(&meta).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return meta, fmt.Errorf("link not found or expired")
+		}
+		return meta, fmt.Errorf("database error: %w", err)
+	}
+
+	return meta, nil
 }
 
 func (pgc *PGClient) GetLink(hash string) (string, error) {

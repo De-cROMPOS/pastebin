@@ -19,6 +19,7 @@ func main() {
 	if err := controller.Initialize(); err != nil {
 		log.Fatalf("smth went wrong while initializing controller %s", err)
 	}
+	defer controller.Close()
 	log.Printf("controller initialized...")
 
 	server := &http.Server{

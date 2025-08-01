@@ -11,7 +11,6 @@ import (
 	pb "github.com/De-cROMPOS/pastebin/hashgenerator/proto"
 )
 
-// TODO: init, get hash == http serv, graceful shutdown to close conn...
 type ConnectorClient struct {
 	GrpcClient
 	S3Client

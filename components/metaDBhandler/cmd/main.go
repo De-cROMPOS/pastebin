@@ -9,12 +9,18 @@ import (
 
 	"github.com/De-cROMPOS/pastebin/metadbhandler/internal/pg"
 	"github.com/De-cROMPOS/pastebin/metadbhandler/internal/partitioner"
+	"github.com/De-cROMPOS/pastebin/metadbhandler/internal/kafka"
 )
 
 func main() {
 	// connection to + kafka
 
 	db := pg.InitDB()
+	
+	broker := &kafka.KafkaClient{}
+	if err := broker.KafkaInit(); err != nil {
+		log.Fatalf("smth went wrong while initializing kafka: %v", err)
+	}
 
 	t := time.Now()
 	for range 26 {
@@ -37,7 +43,7 @@ func main() {
 		select {
 		case <-ticker.C:
 			go func() {
-				err := partitioner.DropOldPartition(db)
+				err := partitioner.DropOldPartition(db, broker)
 				if err != nil {
 					log.Printf("error while dropping particion: %s", err)
 				}
